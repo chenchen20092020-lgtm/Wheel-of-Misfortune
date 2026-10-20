@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Spin the Wheel of Misfortune at the Autumn Fair: storybook curses for Grades 1 to 6 and Grades 7 to 11.">
+<meta name="description" content="Spin the Wheel of Misfortune at the Autumn Fair: challenges for Grades 1 to 6 and Grades 7 to 11.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23dcb45e'/%3E%3Cpath d='M32 32 L32 4 A28 28 0 0 1 56.2 18Z' fill='%235b2a52'/%3E%3Cpath d='M32 32 L56.2 18 A28 28 0 0 1 56.2 46Z' fill='%23a64b1e'/%3E%3Cpath d='M32 32 L56.2 46 A28 28 0 0 1 32 60Z' fill='%232f5040'/%3E%3Cpath d='M32 32 L32 60 A28 28 0 0 1 7.8 46Z' fill='%237a2433'/%3E%3Cpath d='M32 32 L7.8 46 A28 28 0 0 1 7.8 18Z' fill='%232c3263'/%3E%3Cpath d='M32 32 L7.8 18 A28 28 0 0 1 32 4Z' fill='%23e2bb5f'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23e06a22' stroke='%231a0f0a' stroke-width='3'/%3E%3C/svg%3E">
 <style>
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -493,7 +493,7 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
           <canvas class="cover-wheel" data-booth="juniors" aria-hidden="true"></canvas>
           <span class="cover-grades">Grades 1 to 6</span>
           <span class="cover-title">Once Upon a <em>Curse</em></span>
-          <span class="cover-desc">Silly storybook curses for younger players, with a jack-o'-lantern at the center.</span>
+          <span class="cover-desc">Silly challenges for younger players, with a jack-o'-lantern at the center.</span>
           <span class="cover-meta" data-meta="juniors"></span>
           <span class="cover-cta">Open this wheel</span>
         </button>
@@ -501,7 +501,7 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
           <canvas class="cover-wheel" data-booth="seniors" aria-hidden="true"></canvas>
           <span class="cover-grades">Grades 7 to 11</span>
           <span class="cover-title">Happily Never <em>After</em></span>
-          <span class="cover-desc">Darker fairy-tale curses for older players, with a skull at the center.</span>
+          <span class="cover-desc">Messier, tougher challenges for older players, with a skull at the center.</span>
           <span class="cover-meta" data-meta="seniors"></span>
           <span class="cover-cta">Open this wheel</span>
         </button>
@@ -615,7 +615,7 @@ function rand01() {
 const BOOTHS = {
   juniors: {
     id: "juniors",
-    key: "once-upon-a-curse:v1",
+    key: "once-upon-a-curse:v2",
     grades: "Grades 1 to 6",
     titleHTML: "Once Upon a <em>Curse</em>",
     ledger: "The Book of Curses",
@@ -627,23 +627,25 @@ const BOOTHS = {
     leaves: ["#c2561f", "#e0812f", "#9b2335", "#d9a441", "#8a4319", "#6b7430"],
     bats: 3,
     starter: [
-      ["curse", "Huff & Puff", "Blow the ping-pong ball across the table with a straw and knock down the pigs' paper-cup house."],
-      ["curse", "Humpty Dumpty's Great Fall", "Carry the egg on a spoon to the cone and back. If it falls, shout \"Humpty Dumpty had a great fall!\" and try once more."],
-      ["curse", "Cinderella's Chores", "Use the tongs to sort 10 pom-poms into the matching cups in 30 seconds."],
-      ["lucky", "Fairy Godmother", "The curse is broken! Pick a prize from the treasure chest."],
-      ["curse", "Sleeping Beauty's Spell", "Freeze fast asleep for 15 seconds while the villains try to make you laugh."],
-      ["curse", "Frog Prince Curse", "Hop like a frog to the cone and back, croaking \"Ribbit! I'm really royalty!\""],
-      ["curse", "Witch's Cauldron", "Close your eyes, reach into the slime potion and find the gold coin."],
-      ["lucky", "The Villain's Revenge", "You pick a curse, and a villain has to do it instead!"],
-      ["curse", "Emperor's New Clothes", "Strut down the runway in your invisible royal outfit and strike 3 poses."],
-      ["curse", "Mirror, Mirror", "Make your silliest face into the magic mirror. The Evil Queen scores it from 1 to 10."],
-      ["curse", "Peter Pan's Lost Shadow", "Your shadow ran away! Be Captain Hook's shadow and copy his every move for 15 seconds."],
-      ["again", "Plot Twist", "The story isn't over yet. Spin the wheel again!"]
+      ["curse", "Wrong-Hand Portrait", "Draw the person on your right with your non-dominant hand. You have 45 seconds."],
+      ["curse", "Wall Sit or Plank", "Hold a wall sit or a plank for as long as the next person's turn lasts."],
+      ["curse", "Partner in Misfortune", "Choose a misfortune for someone else, but you have to do it alongside them."],
+      ["curse", "Group Charades", "The whole group acts out a word or phrase together. You have 60 seconds to guess it."],
+      ["curse", "Backwards Alphabet", "Say the alphabet backwards in under 1 minute. If you fail, spin again."],
+      ["curse", "Wrong-Foot Shoes", "Wear your shoes on the wrong feet until your next spin."],
+      ["again", "Double Trouble", "Spin twice and do both!"],
+      ["curse", "Thumb War", "Challenge anyone to a thumb war. If you lose, spin again."],
+      ["curse", "Tongue Twister", "Say the tongue twister the group picks three times fast without messing up."],
+      ["curse", "Staring Contest", "Pick anyone for a staring contest. If you blink first, spin again."],
+      ["curse", "Balancing Act", "Balance a small object, like an eraser or a bottle cap, on your head until your next spin. You lose a point every time it drops."],
+      ["lucky", "Everyone Else Spins", "You're safe! Everyone except you has to spin and do what they land on."],
+      ["curse", "Two Truths and a Lie", "The group asks you 3 questions. Lie on exactly one of them, and they guess which."],
+      ["curse", "Flamingo Stand", "Stand on one foot until your next spin. You lose a point every time you put your other foot down."]
     ]
   },
   seniors: {
     id: "seniors",
-    key: "happily-never-after:v1",
+    key: "happily-never-after:v2",
     grades: "Grades 7 to 11",
     titleHTML: "Happily Never <em>After</em>",
     ledger: "The Grimm Ledger",
@@ -655,18 +657,20 @@ const BOOTHS = {
     leaves: ["#7a1420", "#a32a2a", "#4a1018", "#c76b3a", "#5c3a2a", "#d8cbb0"],
     bats: 6,
     starter: [
-      ["curse", "Villain Monologue", "Give a 15-second evil villain speech about why you are cursing the whole school. Full dramatic voice required."],
-      ["curse", "Medusa's Stare", "Staring contest with a villain. Blink first and you turn to stone: hold a statue pose for 20 seconds."],
-      ["curse", "The Mummy's Curse", "Your friends have 30 seconds to wrap you in toilet paper like a mummy. No friends nearby? The villains will do it."],
-      ["lucky", "Pass the Curse", "You escape! Choose someone in your group to spin in your place."],
-      ["curse", "The Mystery Box", "Reach into the box with your eyes closed and name the \"body parts\" inside. Guess 2 out of 3, or let out your loudest scream."],
-      ["curse", "Pinocchio's Nose", "Tell two truths and a lie. If the villains spot the lie, wear the Pinocchio nose until you leave the booth."],
-      ["curse", "The Little Mermaid's Lost Voice", "No talking! Act out the fairy tale a villain whispers to you. Your group has 30 seconds to guess it."],
-      ["lucky", "Fairy Godmother", "The curse is broken. Take a prize from the treasure chest."],
-      ["curse", "Rumpelstiltskin's Riddle", "Solve the villain's riddle in 20 seconds, or dance like a goblin for 10 seconds."],
-      ["curse", "Frankenstein's Dance", "Dance like Frankenstein's monster for 15 seconds while the villains play spooky music."],
-      ["curse", "The Pied Piper's Tune", "Hum any song. If the villains can't name it in 15 seconds, sing the first line out loud."],
-      ["again", "Double Trouble", "Spin again, and you have to do both curses!"]
+      ["curse", "Sticky Notes", "Someone from the crowd writes something on a sticky note and sticks it on your back."],
+      ["lucky", "Bonus Stamp", "Lucky you! Collect a bonus stamp."],
+      ["curse", "Delete a Stamp", "Draw an X through one of your stamps. That stamp is now deleted."],
+      ["curse", "Cream Face", "Cream (or something like it) goes on a paper plate, and your face gets pressed into it."],
+      ["curse", "Hammer", "Get hit once with a toy hammer or something like it."],
+      ["curse", "Hammer by a Friend", "Someone from the crowd gets to hit you once with the hammer."],
+      ["again", "Bonus Spin", "Spin the wheel one more time!"],
+      ["curse", "Scream", "Yell as loud as you can. Loud enough earns you a stamp. Not loud enough, no stamp."],
+      ["curse", "Push-ups", "Do 10 push-ups to earn a stamp. Girls can do them on their knees."],
+      ["curse", "Q&A", "Answer 5 questions from anyone, then collect a stamp."],
+      ["curse", "Quiz", "Answer the quiz to earn a stamp."],
+      ["curse", "Moisturize", "Get sprayed several times with a water sprayer or a water gun."],
+      ["lucky", "Snack", "Treat time! Take a small candy or a chocolate."],
+      ["again", "Double It", "Whatever you land on next round counts double. If this was your last spin, spin again now."]
     ]
   }
 };
