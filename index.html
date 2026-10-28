@@ -107,14 +107,14 @@ button, input, select, textarea { font: inherit; }
 
 /* ---------- App shell ---------- */
 .app {
-  position: relative; z-index: 1; min-height: 100%;
+  position: relative; z-index: 1; min-height: 100%; box-sizing: border-box;
   display: flex; flex-direction: column;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 14px 28px;
 }
 .bar {
-  width: 100%; max-width: 1200px; margin-inline: auto;
+  width: 100%; max-width: 1440px; margin-inline: auto;
   display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px;
 }
 .brand { min-width: 0; }
@@ -155,7 +155,7 @@ h1 em { font-family: var(--font-display-italic); font-style: italic; color: var(
 .icon-btn:hover { background: rgba(60, 40, 80, 0.8); }
 .icon-btn svg, .switch svg, .home-btn svg { display: block; }
 
-main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: auto; }
+main { flex: 1; display: flex; width: 100%; max-width: 1440px; margin-inline: auto; }
 .view { flex: 1; min-width: 0; }
 
 /* ---------- Landing: two storybook covers ---------- */
@@ -199,16 +199,31 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
 
 /* ---------- Part 1: the wheel ---------- */
 .view-wheel {
+  --vh: 1vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 18px; padding-block: 14px 6px;
+  gap: 18px; padding-block: 14px 6px; overflow: clip;
 }
+@supports (height: 100dvh) { .view-wheel { --vh: 1dvh; } }
 .wheel-wrap {
-  --wheel: clamp(240px, min(calc(100vw - 40px), calc(100vh - 330px)), 660px);
-  position: relative; width: var(--wheel); height: var(--wheel); max-width: 100%;
+  --wheel: clamp(240px, min(calc(100vw - 40px), calc((var(--vh) * 100 - 380px) / 1.06)), 720px);
+  position: relative; flex: none; width: var(--wheel); height: var(--wheel); max-width: 100%;
   margin-top: calc(var(--wheel) * 0.06);
 }
-@supports (height: 100dvh) {
-  .wheel-wrap { --wheel: clamp(240px, min(calc(100vw - 40px), calc(100dvh - 330px)), 660px); }
+.wheel-side { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; }
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .view-wheel { flex-direction: row; gap: clamp(28px, 4vw, 72px); }
+  .wheel-wrap { --wheel: clamp(320px, min(calc(100vw - 470px), calc((var(--vh) * 100 - 215px) / 1.06)), 940px); }
+  .wheel-side { flex: 0 1 360px; max-width: 360px; }
+  .controls { flex-wrap: wrap; justify-content: center; }
+}
+/* Full screen at the booth: one slim header line so the wheel can use the height. */
+:root:fullscreen body[data-view="wheel"] .home-btn,
+:root:fullscreen body[data-view="wheel"] .eyebrow,
+:root:fullscreen body[data-view="wheel"] .sub { display: none; }
+:root:fullscreen body[data-view="wheel"] h1 { font-size: 2.2rem; }
+:root:fullscreen body[data-view="wheel"] .wheel-wrap { --wheel: clamp(240px, min(calc(100vw - 40px), calc((var(--vh) * 100 - 290px) / 1.06)), 760px); }
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  :root:fullscreen body[data-view="wheel"] .wheel-wrap { --wheel: clamp(320px, min(calc(100vw - 470px), calc((var(--vh) * 100 - 135px) / 1.06)), 1000px); }
 }
 .wheel-wrap::before {
   content: ""; position: absolute; inset: -9%; border-radius: 50%; z-index: -1;
@@ -257,7 +272,7 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
 
 /* ---------- Part 2: the curse editor ---------- */
 .view-edit { padding-block: 22px 10px; }
-.editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; max-width: 1200px; margin-inline: auto; }
 .ledger {
   position: relative; min-width: 0; color: var(--page-ink);
   padding: clamp(18px, 3.2vw, 34px);
@@ -521,6 +536,7 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
         <canvas id="wheel" role="img" aria-label="Wheel of Misfortune"></canvas>
         <button type="button" class="hub" id="hub" aria-label="Spin the wheel"></button>
       </div>
+      <div class="wheel-side">
       <div class="controls">
         <button type="button" class="spin" id="btn-spin">Spin the wheel</button>
         <button type="button" class="icon-btn" id="btn-sound" aria-pressed="true" aria-label="Turn sound off" title="Sound on">
@@ -532,6 +548,7 @@ main { flex: 1; display: flex; width: 100%; max-width: 1200px; margin-inline: au
       <div class="history">
         <span class="history-label">Last spins</span>
         <ol id="history"></ol>
+      </div>
       </div>
     </section>
 
@@ -1186,6 +1203,7 @@ function setHeader() {
 function show(v) {
   if (spinning) return;
   closeResult(false);
+  document.body.dataset.view = v;
   viewLanding.hidden = v !== "landing";
   viewWheel.hidden = v !== "wheel";
   viewEdit.hidden = v !== "edit";
