@@ -410,6 +410,33 @@ main { flex: 1; display: flex; width: 100%; max-width: 1440px; margin-inline: au
 .result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 1.6em; }
 .spin.small { font-size: 1.3rem; padding: 0.38em 1.3em 0.45em; box-shadow: 0 8px 22px var(--btn-glow), inset 0 2px 0 rgba(255, 255, 255, 0.35); }
 
+/* ---------- Suspense before a curse lands ---------- */
+.dread {
+  position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease;
+  background: radial-gradient(ellipse at 50% 45%, rgba(10, 2, 6, 0.45) 0%, rgba(6, 1, 4, 0.92) 70%);
+}
+body.suspense .dread { opacity: 1; }
+body.suspense .wheel-wrap::before {
+  background: radial-gradient(circle, rgba(225, 30, 45, 0.6) 0%, rgba(140, 10, 30, 0.22) 50%, transparent 68%);
+  animation: throb 0.55s ease-in-out infinite alternate;
+}
+@keyframes throb { from { opacity: 0.55; transform: scale(0.97); } to { opacity: 1; transform: scale(1.05); } }
+body.suspense .pointer .eyes { fill: #ff2020; }
+body.suspense .hint { color: var(--accent); font-style: normal; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.04em; }
+.wheel-wrap.teeter { animation: teeter 0.09s linear infinite; }
+@keyframes teeter {
+  0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(1px, -1px); } 75% { transform: translate(2px, 1px); }
+}
+.flash { position: fixed; inset: 0; z-index: 25; pointer-events: none; background: #fff6e0; opacity: 0; }
+.flash.go { animation: flash 0.7s ease-out; }
+@keyframes flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+.app.boom { animation: boom 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes boom {
+  10%, 90% { transform: translate(-3px, 2px); } 20%, 80% { transform: translate(6px, -4px); }
+  30%, 50%, 70% { transform: translate(-10px, 6px); } 40%, 60% { transform: translate(10px, -6px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
@@ -470,8 +497,10 @@ main { flex: 1; display: flex; width: 100%; max-width: 1440px; margin-inline: au
     <use href="#pk" transform="translate(372 216) scale(0.75)"/>
     <use href="#pk" transform="translate(990 210) scale(0.9)"/>
   </svg>
+  <div class="dread"></div>
 </div>
 <canvas id="fx" aria-hidden="true"></canvas>
+<div class="flash" id="flash" aria-hidden="true"></div>
 
 <div class="app">
   <header class="bar">
@@ -1012,6 +1041,7 @@ function drawWheel(cv, b, rot, win) {
 
 /* ---------- Elements and state ---------- */
 const wheelCv = $("#wheel"), previewCv = $("#preview"), pointer = $("#pointer");
+const wheelWrap = $(".wheel-wrap"), flashEl = $("#flash"), appEl = $(".app");
 const spinBtn = $("#btn-spin"), hubBtn = $("#hub"), hintEl = $("#hint"), histEl = $("#history");
 const viewLanding = $("#view-landing"), viewWheel = $("#view-wheel"), viewEdit = $("#view-edit");
 const tabWheel = $("#tab-wheel"), tabEdit = $("#tab-edit"), switchEl = $("#switch"), homeBtn = $("#btn-home");
@@ -1030,37 +1060,118 @@ function drawCovers() {
 
 /* ---------- Sound ---------- */
 let soundOn = (() => { try { return localStorage.getItem(SOUND_KEY) !== "0"; } catch (e) { return true; } })();
-let actx = null;
+let actx = null, master = null, noiseBuf = null;
+const MASTER_VOL = 1.8;
 function audioInit() {
   if (!soundOn) return;
   try {
-    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
-    if (actx && actx.state === "suspended") actx.resume();
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = new AC();
+      const comp = actx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 5;
+      comp.attack.value = 0.003; comp.release.value = 0.25;
+      master = actx.createGain(); master.gain.value = MASTER_VOL;
+      master.connect(comp); comp.connect(actx.destination);
+    }
+    if (actx.state === "suspended") actx.resume();
   } catch (e) {}
 }
-function tone(freq, dur, type = "triangle", vol = 0.08, when = 0, glideTo = 0) {
+function env(g, t0, vol, attack, end) {
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, end);
+}
+function tone(freq, dur, type = "triangle", vol = 0.2, when = 0, glideTo = 0, at = 0) {
   if (!soundOn || !actx) return;
   try {
-    const t0 = actx.currentTime + when;
+    const t0 = (at || actx.currentTime) + when;
     const o = actx.createOscillator(), g = actx.createGain();
     o.type = type;
     o.frequency.setValueAtTime(freq, t0);
     if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(actx.destination);
+    env(g, t0, vol, 0.01, t0 + dur);
+    o.connect(g); g.connect(master);
     o.start(t0); o.stop(t0 + dur + 0.03);
+  } catch (e) {}
+}
+function noiseSrc() {
+  if (!noiseBuf) {
+    const len = Math.floor(actx.sampleRate * 2);
+    noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const s = actx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+}
+function noiseHit(t0, dur, vol, type, f0, f1) {
+  const s = noiseSrc(), f = actx.createBiquadFilter(), g = actx.createGain();
+  f.type = type; f.frequency.setValueAtTime(f0, t0);
+  if (f1) f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  env(g, t0, vol, 0.006, t0 + dur);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(t0); s.stop(t0 + dur + 0.05);
+}
+function heartbeat(t) {
+  [[0, 0.55], [0.17, 0.4]].forEach(([dt, v]) => {
+    tone(150, 0.16, "triangle", v, 0, 80, t + dt);
+    tone(70, 0.2, "sine", v, 0, 42, t + dt);
+    noiseHit(t + dt, 0.05, v * 0.35, "lowpass", 700);
+  });
+}
+function drone(t1, t2) {
+  const f = actx.createBiquadFilter(), g = actx.createGain();
+  f.type = "lowpass"; f.Q.value = 6;
+  f.frequency.setValueAtTime(260, t1); f.frequency.exponentialRampToValueAtTime(1500, t2);
+  g.gain.setValueAtTime(0.0001, t1); g.gain.exponentialRampToValueAtTime(0.12, t2 - 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.12);
+  f.connect(g); g.connect(master);
+  [110, 116.5].forEach(fr => {
+    const o = actx.createOscillator();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(fr, t1); o.frequency.linearRampToValueAtTime(fr * 1.5, t2);
+    o.connect(f); o.start(t1); o.stop(t2 + 0.15);
+  });
+}
+function fuse(t1, t2) {
+  const s = noiseSrc(), bp = actx.createBiquadFilter(), hp = actx.createBiquadFilter(), g = actx.createGain();
+  bp.type = "bandpass"; bp.frequency.value = 4200; bp.Q.value = 0.8;
+  hp.type = "highpass"; hp.frequency.value = 1800;
+  g.gain.setValueAtTime(0.0001, t1);
+  g.gain.exponentialRampToValueAtTime(0.1, t1 + 0.25);
+  for (let t = t1 + 0.25; t < t2 - 0.02; t += 0.035) g.gain.setValueAtTime(0.06 + Math.random() * 0.14, t);
+  g.gain.setValueAtTime(0.12, t2 - 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.04);
+  s.connect(bp); bp.connect(hp); hp.connect(g); g.connect(master);
+  s.start(t1); s.stop(t2 + 0.1);
+}
+function boom(t) {
+  noiseHit(t, 0.12, 0.6, "highpass", 2500);
+  noiseHit(t, 1.7, 1.0, "lowpass", 1600, 80);
+  tone(130, 0.9, "sine", 0.9, 0, 32, t);
+  tone(220, 0.5, "triangle", 0.45, 0, 55, t);
+}
+/* Lead-up sounds, timed from the start of a 5-second spin that will land on a curse. */
+function scheduleSuspense(bomb) {
+  if (!soundOn || !actx) return;
+  try {
+    const t0 = actx.currentTime;
+    if (bomb) {
+      fuse(t0 + 2.6, t0 + 5.0);
+      for (let t = 4.95, gap = 0.06; t > 2.9; t -= gap, gap *= 1.22) tone(1760, 0.07, "square", 0.09, 0, 0, t0 + t);
+      boom(t0 + 5.0);
+    } else {
+      drone(t0 + 2.9, t0 + 5.0);
+      [3.1, 3.8, 4.35, 4.75].forEach(b => heartbeat(t0 + b));
+    }
   } catch (e) {}
 }
 function playResult(kind) {
   const low = B && B.id === "seniors" ? 0.75 : 1;
-  if (kind === "lucky") [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.35, "triangle", 0.07, i * 0.09));
-  else if (kind === "again") { tone(392, 0.18, "triangle", 0.07, 0); tone(523, 0.18, "triangle", 0.07, 0.14); tone(659, 0.3, "triangle", 0.07, 0.28); }
+  if (kind === "lucky") [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.4, "triangle", 0.18, i * 0.09));
+  else if (kind === "again") { tone(392, 0.2, "triangle", 0.18, 0); tone(523, 0.2, "triangle", 0.18, 0.14); tone(659, 0.34, "triangle", 0.18, 0.28); }
   else {
-    tone(233 * low, 0.7, "sawtooth", 0.035, 0, 175 * low);
-    tone(220 * low, 0.7, "sawtooth", 0.035, 0, 165 * low);
-    tone(165 * low, 1.1, "triangle", 0.08, 0.45, 98 * low);
+    tone(233 * low, 0.7, "sawtooth", 0.1, 0, 175 * low);
+    tone(220 * low, 0.7, "sawtooth", 0.1, 0, 165 * low);
+    tone(165 * low, 1.1, "triangle", 0.24, 0.45, 98 * low);
   }
 }
 const soundBtn = $("#btn-sound");
@@ -1075,7 +1186,8 @@ soundBtn.addEventListener("click", () => {
   soundOn = !soundOn;
   try { localStorage.setItem(SOUND_KEY, soundOn ? "1" : "0"); } catch (e) {}
   renderSound();
-  if (soundOn) { audioInit(); tone(880, 0.12, "triangle", 0.06); }
+  if (master) master.gain.setValueAtTime(soundOn ? MASTER_VOL : 0, actx.currentTime);
+  if (soundOn) { audioInit(); tone(880, 0.12, "triangle", 0.15); }
 });
 
 /* ---------- Spinning ---------- */
@@ -1111,6 +1223,26 @@ function setBusy(b) {
   tabEdit.setAttribute("aria-disabled", String(b));
   homeBtn.disabled = b;
 }
+/* Every spin lasts exactly 5 seconds. A spin that will land on a curse slows
+   to a crawl, teeters on the edge of that slice (T1 to T2), then tips into it. */
+const SPIN_MS = 5000, T1 = 3300, T2 = 4300;
+function herm(p0, p1, m0, m1, s) {
+  const s2 = s * s, s3 = s2 * s;
+  return (2 * s3 - 3 * s2 + 1) * p0 + (s3 - 2 * s2 + s) * m0 + (-2 * s3 + 3 * s2) * p1 + (s3 - s2) * m1;
+}
+function profile(delta, dread) {
+  if (!dread) return ms => delta * (1 - Math.pow(1 - Math.min(1, ms / SPIN_MS), 3));
+  const pre = Math.min(0.11, dread.prevArc * 0.6), eps = Math.min(0.016, dread.prevArc * 0.12);
+  const dA = dread.enter - pre, dB = dread.enter - eps;
+  const sA = T1 / 1000, sB = (T2 - T1) / 1000, sC = (SPIN_MS - T2) / 1000;
+  const v0 = 2.6 * dA / sA, v1 = 1.7 * (pre - eps) / sB, v2 = 0.12 * (pre - eps) / sB;
+  return ms => {
+    if (ms <= T1) return herm(0, dA, v0 * sA, v1 * sA, ms / T1);
+    if (ms <= T2) return herm(dA, dB, v1 * sB, v2 * sB, (ms - T1) / (T2 - T1));
+    if (ms < SPIN_MS) return herm(dB, delta, v2 * sC, 0, (ms - T2) / (SPIN_MS - T2));
+    return delta;
+  };
+}
 function spin() {
   if (spinning || !B || viewWheel.hidden) return;
   const booth = B;
@@ -1120,33 +1252,65 @@ function spin() {
   closeResult(false);
   winIndex = -1;
   const target = pickIndex(g.probs);
-  const landing = (g.starts[target] + g.sizes[target] * (0.12 + rand01() * 0.76)) * TAU;
+  const bad = g.list[target].kind === "curse";
+  const bomb = bad && booth.id === "seniors" && /cream/i.test(g.list[target].name);
+  const frac = bad ? 0.55 + rand01() * 0.3 : 0.12 + rand01() * 0.76;
+  const landing = (g.starts[target] + g.sizes[target] * frac) * TAU;
   const curMod = ((-booth.rot % TAU) + TAU) % TAU;
-  const turns = reduceMotion ? 1 : 5 + Math.floor(rand01() * 3);
+  const turns = (reduceMotion ? 3 : 5) + Math.floor(rand01() * 3);
   const delta = (((curMod - landing) % TAU) + TAU) % TAU + turns * TAU;
-  const dur = reduceMotion ? 1200 : 5200 + rand01() * 1300;
+  const dread = bad ? { enter: delta - g.sizes[target] * (1 - frac) * TAU, prevArc: g.sizes[(target + 1) % g.n] * TAU } : null;
+  const pos = profile(delta, dread);
   const from = booth.rot;
-  let start = 0, last = indexAt(booth.rot, g);
+  let start = 0, last = indexAt(booth.rot, g), stage = 0;
   spinning = true; setBusy(true);
+  if (bad) scheduleSuspense(bomb);
   const frame = now => {
     if (!start) start = now;
-    const t = Math.min(1, (now - start) / dur);
-    const e = 1 - Math.pow(1 - t, 4);
-    booth.rot = from + delta * e;
+    const ms = Math.min(SPIN_MS, now - start);
+    booth.rot = from + pos(ms);
     drawMain();
+    if (bad) {
+      if (stage === 0 && ms >= 2900) {
+        stage = 1;
+        document.body.classList.add("suspense");
+        clearTimeout(hintTimer); hintEl.classList.remove("warn");
+        hintEl.textContent = bomb ? "Tick… tick… tick…" : "Uh oh…";
+      }
+      if (stage === 1 && ms >= T1) { stage = 2; wheelWrap.classList.add("teeter"); }
+      if (stage === 2 && ms >= T2) { stage = 3; wheelWrap.classList.remove("teeter"); }
+    }
     const idx = indexAt(booth.rot, g);
-    if (idx !== last) { last = idx; flick(); tone(1300 + rand01() * 160, 0.035, "square", 0.028); }
-    if (t < 1) requestAnimationFrame(frame);
-    else finish(booth, g);
+    if (idx !== last) {
+      last = idx; flick();
+      if (bad && ms >= T1 && idx === target) tone(200, 0.16, "triangle", 0.3, 0, 120);
+      else tone(1300 + rand01() * 160, 0.035, "square", 0.07);
+    }
+    if (ms < SPIN_MS) requestAnimationFrame(frame);
+    else finish(booth, g, { bad, bomb });
   };
   requestAnimationFrame(frame);
 }
-function finish(booth, g) {
+function boomVisual() {
+  if (!reduceMotion) {
+    flashEl.classList.remove("go"); void flashEl.offsetWidth; flashEl.classList.add("go");
+    appEl.classList.remove("boom"); void appEl.offsetWidth; appEl.classList.add("boom");
+  }
+  burst("cream");
+}
+function finish(booth, g, fx) {
   booth.rot = booth.rot % TAU;
   winIndex = indexAt(booth.rot, g);
-  spinning = false; setBusy(false);
+  wheelWrap.classList.remove("teeter");
   drawMain();
-  showResult(g.list[winIndex], paletteFor(booth, g.list)[winIndex].bg);
+  const item = g.list[winIndex], bg = paletteFor(booth, g.list)[winIndex].bg;
+  if (fx.bomb) boomVisual();
+  setTimeout(() => {
+    document.body.classList.remove("suspense");
+    if (B) { hintEl.textContent = B.hint; hintEl.classList.remove("warn"); }
+    spinning = false; setBusy(false);
+    showResult(item, bg, fx);
+  }, fx.bomb ? 750 : fx.bad ? 350 : 0);
 }
 
 /* ---------- Result card ---------- */
@@ -1165,7 +1329,7 @@ function renderHistory() {
     histEl.append(li);
   });
 }
-function showResult(item, bg) {
+function showResult(item, bg, fx = {}) {
   const kind = item.kind;
   resultEl.dataset.kind = kind;
   kickerEl.textContent = KICKER[kind];
@@ -1175,8 +1339,7 @@ function showResult(item, bg) {
   resultEl.hidden = false;
   againBtn.focus({ preventScroll: true });
   live.textContent = `${KICKER[kind]}: ${nameEl.textContent}. ${textEl.textContent}`;
-  playResult(kind);
-  burst(kind);
+  if (!fx.bomb) { playResult(kind); burst(kind); }
   B.history.unshift({ name: item.name.trim(), bg });
   if (B.history.length > 6) B.history.length = 6;
   renderHistory();
@@ -1595,6 +1758,17 @@ function burst(kind) {
   if (reduceMotion) return;
   const r = wheelCv.getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (kind === "cream") {
+    const cream = ["#ffffff", "#fffdf5", "#fff3d6", "#f6ead0"];
+    for (let i = 0; i < 110; i++) {
+      const a = rand01() * TAU, sp = 4 + rand01() * 11;
+      parts.push({
+        x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 80 + rand01() * 60,
+        rot: 0, vr: 0, s: 5 + rand01() * 12, c: cream[i % cream.length], blob: true
+      });
+    }
+    return;
+  }
   const cols = kind === "lucky" ? ["#ffe9a8", "#dcb45e", "#fff6dc"] : kind === "again" ? ["#e6d6ae", "#b3a7c2", "#dcb45e"] : leafColors;
   for (let i = 0; i < 48; i++) {
     const a = rand01() * TAU, sp = 3 + rand01() * 7;
@@ -1618,7 +1792,8 @@ function drawFx(dt) {
     fctx.globalAlpha = Math.min(1, k * 1.5);
     fctx.translate(p.x, p.y); fctx.rotate(p.rot); fctx.scale(p.s, p.s);
     fctx.fillStyle = p.c;
-    fctx.fill(p.star ? SPARK : LEAF[p.shape]);
+    if (p.blob) { fctx.beginPath(); fctx.arc(0, 0, 1, 0, TAU); fctx.fill(); }
+    else fctx.fill(p.star ? SPARK : LEAF[p.shape]);
     fctx.restore();
   }
 }
